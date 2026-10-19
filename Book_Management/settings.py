@@ -120,7 +120,11 @@ if db_host:
     # Production Cloud Database (e.g. Aiven MySQL)
     ssl_options = {}
     if os.environ.get('DB_SSL_REQUIRED', 'false').lower() == 'true':
-        ssl_options = {'ssl_mode': 'REQUIRED'}
+        ca_path = BASE_DIR / 'aiven_ca.pem'
+        if ca_path.exists():
+            ssl_options = {'ssl': {'ca': str(ca_path)}}
+        else:
+            ssl_options = {'ssl': {'ssl': True}}
 
     DATABASES = {
         'default': {
