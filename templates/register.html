@@ -1,63 +1,193 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Create Account - Book Store</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f8fafc;
+            color: #0f172a;
+            display: flex;
+            min-height: 100vh;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+        .auth-card {
+            width: 100%;
+            max-width: 400px;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
+            padding: 32px;
+        }
+        .brand-header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+        .brand-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #0f172a;
+            letter-spacing: -0.02em;
+        }
+        .brand-subtitle {
+            font-size: 13px;
+            color: #64748b;
+            margin-top: 6px;
+        }
+        .form-group {
+            margin-bottom: 16px;
+        }
+        .form-label {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            color: #334155;
+            margin-bottom: 6px;
+        }
+        .form-input {
+            width: 100%;
+            padding: 9px 12px;
+            font-size: 14px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            background-color: #ffffff;
+            color: #0f172a;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+            outline: none;
+        }
+        .form-input:focus {
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+        }
+        .pin-input {
+            width: 180px;
+            padding: 10px;
+            font-size: 26px;
+            text-align: center;
+            letter-spacing: 12px;
+            font-family: monospace;
+            font-weight: 600;
+            border: 1px solid #2563eb;
+            border-radius: 6px;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+            margin: 12px auto;
+            display: block;
+        }
+        .btn-submit {
+            width: 100%;
+            padding: 10px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #ffffff;
+            background-color: #0f172a;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.15s ease;
+            margin-top: 8px;
+        }
+        .btn-submit:hover {
+            background-color: #1e293b;
+        }
+        .btn-submit:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .auth-footer {
+            margin-top: 24px;
+            text-align: center;
+            font-size: 13px;
+            color: #64748b;
+        }
+        .auth-footer a {
+            color: #2563eb;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .auth-footer a:hover {
+            text-decoration: underline;
+        }
+        .alert-box {
+            margin-top: 16px;
+            padding: 10px 12px;
+            font-size: 13px;
+            border-radius: 6px;
+            line-height: 1.4;
+        }
+        .alert-error {
+            background-color: #fef2f2;
+            border: 1px solid #fee2e2;
+            color: #991b1b;
+        }
+        .alert-success {
+            background-color: #f0fdf4;
+            border: 1px solid #dcfce7;
+            color: #166534;
+        }
+        .alert-info {
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            color: #475569;
+        }
+    </style>
 </head>
 <body>
-    <div style="width: 350px; margin: 40px auto; border: 1px solid #000; padding: 25px; font-family: sans-serif;">
-        
+    <div class="auth-card">
         <!-- Step 1: Registration Form -->
         <div id="stepRegister">
-            <h3 style="text-align: center; margin-top: 0;">Create Account</h3>
+            <div class="brand-header">
+                <h1 class="brand-title">Create Account</h1>
+                <p class="brand-subtitle">Enter your credentials to register</p>
+            </div>
             
             <form id="regForm" onsubmit="handleRegister(event)">
-                <p>
-                    <label>Name</label><br>
-                    <input type="text" id="name" required style="width: 100%; box-sizing: border-box; padding: 7px; margin-top: 4px;">
-                </p>
-                <p>
-                    <label>Email (รับรหัส PIN ทาง Gmail)</label><br>
-                    <input type="email" id="email" required style="width: 100%; box-sizing: border-box; padding: 7px; margin-top: 4px;">
-                </p>
-                <p>
-                    <label>Password</label><br>
-                    <input type="password" id="password" required style="width: 100%; box-sizing: border-box; padding: 7px; margin-top: 4px;">
-                </p>
-                <p style="text-align: center; margin-top: 20px;">
-                    <button type="submit" id="regBtn" style="padding: 8px 24px; font-size: 14px; cursor: pointer;">Register</button>
-                </p>
+                <div class="form-group">
+                    <label class="form-label" for="name">Full Name</label>
+                    <input type="text" id="name" class="form-input" placeholder="John Doe" required autocomplete="name">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="email">Email Address</label>
+                    <input type="email" id="email" class="form-input" placeholder="name@example.com" required autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="password">Password</label>
+                    <input type="password" id="password" class="form-input" placeholder="••••••••" required autocomplete="new-password">
+                </div>
+                <button type="submit" id="regBtn" class="btn-submit">Register</button>
             </form>
         </div>
 
         <!-- Step 2: 4-digit PIN Verification Form -->
         <div id="stepVerify" style="display: none;">
-            <h3 style="text-align: center; margin-top: 0; color: #0d6efd;">Email Verification</h3>
-            <p style="font-size: 13px; text-align: center; line-height: 1.5;">
-                ระบบได้ส่งรหัส <b>PIN 4 หลัก</b> ไปยัง<br>
-                <b id="targetEmailDisplay" style="color: #0d6efd;"></b><br>
-                กรุณาตรวจสอบกล่องจดหมายแล้วนำรหัสมากรอกด้านล่าง:
-            </p>
+            <div class="brand-header">
+                <h1 class="brand-title">Verify Email</h1>
+                <p class="brand-subtitle">
+                    A 4-digit PIN has been sent to<br>
+                    <strong id="targetEmailDisplay" style="color: #0f172a;"></strong>
+                </p>
+            </div>
 
             <form id="pinForm" onsubmit="handleVerifyPIN(event)">
-                <div style="text-align: center; margin: 15px 0;">
-                    <label style="font-size: 13px; font-weight: bold;">Enter 4-Digit PIN</label><br>
-                    <input type="text" id="pinInput" maxlength="4" required 
-                           pattern="[0-9]{4}" placeholder="0000"
-                           style="width: 160px; font-size: 28px; text-align: center; letter-spacing: 10px; font-weight: bold; padding: 8px; margin-top: 8px; border: 2px solid #0d6efd; border-radius: 4px;">
+                <div class="form-group" style="text-align: center;">
+                    <label class="form-label">Enter 4-Digit Verification PIN</label>
+                    <input type="text" id="pinInput" class="pin-input" maxlength="4" pattern="[0-9]{4}" placeholder="0000" required autofocus>
                 </div>
-                <p style="text-align: center; margin-top: 15px;">
-                    <button type="submit" id="verifyBtn" style="padding: 8px 24px; font-size: 14px; background: #198754; color: white; border: none; border-radius: 4px; cursor: pointer;">Verify PIN & Login</button>
-                </p>
+                <button type="submit" id="verifyBtn" class="btn-submit">Verify Account</button>
             </form>
         </div>
 
-        <div id="resultBox" style="margin-top: 15px; font-size: 13px;"></div>
+        <div id="resultBox"></div>
 
-        <hr style="margin-top: 20px;">
-        <p style="text-align: center; font-size: 13px; margin-bottom: 0;">
-            Already have an account? <a href="/login/">Login here</a>
-        </p>
+        <div class="auth-footer">
+            Already have an account? <a href="/login/">Sign in</a>
+        </div>
     </div>
 
     <script>
@@ -68,8 +198,8 @@
             const resBox = document.getElementById('resultBox');
             const regBtn = document.getElementById('regBtn');
             regBtn.disabled = true;
-            regBtn.innerText = 'Sending email...';
-            resBox.innerHTML = '<div style="color: #666;">กำลังส่งรหัส PIN ไปยังอีเมลของคุณผ่าน Gmail...</div>';
+            regBtn.innerText = 'Creating account...';
+            resBox.innerHTML = '<div class="alert-box alert-info">Sending verification PIN to your email...</div>';
 
             registeredEmail = document.getElementById('email').value.trim();
             const payload = {
@@ -87,26 +217,25 @@
                 const data = await res.json();
 
                 if (res.ok) {
-                    // Switch to PIN verification step
                     document.getElementById('stepRegister').style.display = 'none';
                     document.getElementById('stepVerify').style.display = 'block';
                     document.getElementById('targetEmailDisplay').innerText = registeredEmail;
                     document.getElementById('pinInput').focus();
 
-                    resBox.innerHTML = '<div style="color: green; border: 1px solid #c3e6cb; background: #d4edda; padding: 8px; border-radius: 4px;">'
-                        + '✓ ส่งอีเมลสำเร็จ! ตรวจสอบรหัส PIN 4 ตัวในกล่องจดหมายของคุณ'
+                    resBox.innerHTML = '<div class="alert-box alert-success">'
+                        + 'Registration initiated. Please enter the 4-digit PIN sent to your email.'
                         + '</div>';
                 } else {
                     regBtn.disabled = false;
                     regBtn.innerText = 'Register';
-                    resBox.innerHTML = '<div style="color: red; border: 1px solid #f5c6cb; background: #f8d7da; padding: 8px; border-radius: 4px;">'
-                        + (data.error || JSON.stringify(data))
+                    resBox.innerHTML = '<div class="alert-box alert-error">'
+                        + '<strong>Registration error:</strong> ' + (data.error || JSON.stringify(data))
                         + '</div>';
                 }
             } catch (err) {
                 regBtn.disabled = false;
                 regBtn.innerText = 'Register';
-                resBox.innerHTML = '<div style="color: red;">Network error: ' + err.message + '</div>';
+                resBox.innerHTML = '<div class="alert-box alert-error">Network error: ' + err.message + '</div>';
             }
         }
 
@@ -130,24 +259,23 @@
                 const data = await res.json();
 
                 if (res.ok) {
-                    resBox.innerHTML = '<div style="color: green; border: 1px solid #c3e6cb; background: #d4edda; padding: 10px; border-radius: 4px; text-align: center;">'
-                        + '<b>ยืนยันสำเร็จ! ✓</b><br>'
-                        + 'กำลังพาท่านไปหน้า Login...'
+                    resBox.innerHTML = '<div class="alert-box alert-success">'
+                        + 'Account verified successfully. Redirecting to sign in...'
                         + '</div>';
                     setTimeout(() => {
                         window.location.href = '/login/';
-                    }, 1200);
+                    }, 1000);
                 } else {
                     verifyBtn.disabled = false;
-                    verifyBtn.innerText = 'Verify PIN & Login';
-                    resBox.innerHTML = '<div style="color: red; border: 1px solid #f5c6cb; background: #f8d7da; padding: 8px; border-radius: 4px; text-align: center;">'
-                        + '<b>รหัส PIN ไม่ถูกต้อง:</b> ' + (data.error || 'กรุณาลองใหม่อีกครั้ง')
+                    verifyBtn.innerText = 'Verify Account';
+                    resBox.innerHTML = '<div class="alert-box alert-error">'
+                        + (data.error || 'Invalid verification PIN. Please try again.')
                         + '</div>';
                 }
             } catch (err) {
                 verifyBtn.disabled = false;
-                verifyBtn.innerText = 'Verify PIN & Login';
-                resBox.innerHTML = '<div style="color: red;">Network error: ' + err.message + '</div>';
+                verifyBtn.innerText = 'Verify Account';
+                resBox.innerHTML = '<div class="alert-box alert-error">Network error: ' + err.message + '</div>';
             }
         }
     </script>
