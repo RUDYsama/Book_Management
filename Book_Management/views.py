@@ -28,10 +28,20 @@ def dashboard_view(request):
     current_email = request.session.get('user_email', '')
     current_role = request.session.get('user_role', 'viewer')
 
-    form = BooksForm(request.POST or None) if "Books" in globals() else None
-    if request.method == "POST" and form and form.is_valid():
-        form.save()
-        return redirect('dashboard')
+    # RBAC permissions
+    can_create = current_role in ['editor', 'manager', 'admin']
+    can_edit = current_role in ['editor', 'manager', 'admin']
+    can_delete = current_role in ['admin']
+    can_action = can_edit or can_delete
+
+    form = None
+    if can_create and "Books" in globals():
+        form = BooksForm(request.POST or None)
+        if request.method == "POST" and form.is_valid():
+            form.save()
+            return redirect('dashboard')
+    elif request.method == "POST" and not can_create:
+        return HttpResponse("Forbidden: You do not have permission to add books.", status=403)
 
     search = request.GET.get('q', '').strip()
     sort = request.GET.get('sort', '-id')
@@ -56,13 +66,20 @@ def dashboard_view(request):
         'model_name': 'Books',
         'current_user': current_user,
         'current_email': current_email,
-        'current_role': current_role
+        'current_role': current_role,
+        'can_create': can_create,
+        'can_edit': can_edit,
+        'can_delete': can_delete,
+        'can_action': can_action,
     })
 
 
 def delete_item_view(request, pk):
     if not request.session.get('user_id'):
         return redirect('login_page')
+    current_role = request.session.get('user_role', 'viewer')
+    if current_role != 'admin':
+        return HttpResponse("Forbidden: Only Admin has permission to delete books.", status=403)
     item = get_object_or_404(Books, pk=pk)
     item.delete()
     return redirect('dashboard')
@@ -71,6 +88,9 @@ def delete_item_view(request, pk):
 def edit_item_view(request, pk):
     if not request.session.get('user_id'):
         return redirect('login_page')
+    current_role = request.session.get('user_role', 'viewer')
+    if current_role not in ['editor', 'manager', 'admin']:
+        return HttpResponse("Forbidden: Your role does not have permission to edit books.", status=403)
     item = get_object_or_404(Books, pk=pk)
     form = BooksForm(request.POST or None, instance=item)
     if request.method == "POST" and form.is_valid():
@@ -79,7 +99,8 @@ def edit_item_view(request, pk):
     return render(request, 'edit_item.html', {
         'form': form,
         'item': item,
-        'model_name': 'Books'
+        'model_name': 'Books',
+        'current_role': current_role,
     })
 
 

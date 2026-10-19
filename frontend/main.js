@@ -67,14 +67,41 @@ function renderAuthenticatedView() {
     manager: 'bg-warning text-dark',
     viewer: 'bg-secondary'
   };
-  const color = roleColors[currentUser.role] || 'bg-secondary';
-  badge.innerHTML = `<span class="badge ${color} badge-role">${currentUser.name} (${currentUser.role})</span>`;
+  const role = (currentUser && currentUser.role ? currentUser.role : 'viewer').toLowerCase();
+  const color = roleColors[role] || 'bg-secondary';
+  badge.innerHTML = `<span class="badge ${color} badge-role">${currentUser.name} (${role.toUpperCase()})</span>`;
   badge.classList.remove('d-none');
   document.getElementById('logoutBtn').classList.remove('d-none');
+
+  // RBAC: Low ranks cannot see create book button
+  const canCreate = (role === 'admin' || role === 'editor' || role === 'manager');
+  const addBookBtn = document.getElementById('addBookBtn');
+  if (addBookBtn) {
+    if (canCreate) {
+      addBookBtn.classList.remove('d-none');
+    } else {
+      addBookBtn.classList.add('d-none');
+    }
+  }
 }
 
 async function loadBooks() {
   const tbody = document.getElementById('booksTableBody');
+  const role = (currentUser && currentUser.role ? currentUser.role : 'viewer').toLowerCase();
+  const canDelete = (role === 'admin');
+  const canEdit = (role === 'admin' || role === 'editor' || role === 'manager');
+  const canAction = canEdit || canDelete;
+
+  // Toggle Action table header
+  const actionHeader = document.getElementById('actionHeader');
+  if (actionHeader) {
+    if (canAction) {
+      actionHeader.classList.remove('d-none');
+    } else {
+      actionHeader.classList.add('d-none');
+    }
+  }
+
   try {
     const res = await fetch(`${API_URL}/api/books/`, {
       headers: {
@@ -88,8 +115,9 @@ async function loadBooks() {
     }
 
     const books = await res.json();
+    const colCount = canAction ? 7 : 6;
     if (!books || books.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted">ไม่พบข้อมูลหนังสือ</td></tr>';
+      tbody.innerHTML = `<tr><td colspan="${colCount}" class="text-center py-4 text-muted">ไม่พบข้อมูลหนังสือ</td></tr>`;
       return;
     }
 
@@ -101,15 +129,16 @@ async function loadBooks() {
         <td><span class="badge bg-light text-dark border">${b.category}</span></td>
         <td>฿${parseFloat(b.price).toFixed(2)}</td>
         <td>${b.stock}</td>
+        ${canAction ? `
         <td class="text-end">
-          <button class="btn btn-outline-danger btn-sm" onclick="handleDeleteBook(${b.id})">
-            <i class="bi bi-trash"></i> ลบ (Admin)
-          </button>
-        </td>
+          ${canEdit ? `<button class="btn btn-outline-primary btn-sm me-1" onclick="alert('Edit book ID: ${b.id}')"><i class="bi bi-pencil"></i> แก้ไข</button>` : ''}
+          ${canDelete ? `<button class="btn btn-outline-danger btn-sm" onclick="handleDeleteBook(${b.id})"><i class="bi bi-trash"></i> ลบ</button>` : ''}
+        </td>` : ''}
       </tr>
     `).join('');
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="7" class="text-center text-danger py-4">เกิดข้อผิดพลาด: ${err.message}</td></tr>`;
+    const colCount = canAction ? 7 : 6;
+    tbody.innerHTML = `<tr><td colspan="${colCount}" class="text-center text-danger py-4">เกิดข้อผิดพลาด: ${err.message}</td></tr>`;
   }
 }
 

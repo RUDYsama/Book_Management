@@ -7,7 +7,7 @@
     <div style="display: flex; justify-content: space-between; align-items: center; background: #f8f9fa; padding: 10px 15px; border-bottom: 1px solid #ccc;">
         <h2 style="margin: 0;">Book Management</h2>
         <div>
-            <span>Logged in as: <b>{{ current_user }}</b> ({{ current_email }}) &nbsp;|&nbsp; Role: <b style="color: #0284c7; text-transform: uppercase;">{{ current_role }}</b></span> &nbsp;|&nbsp;
+            <span>Logged in as: <b>{{ current_user }}</b> ({{ current_email }}) &nbsp;|&nbsp; Role: <b id="currentRoleBadge" style="color: #0284c7; text-transform: uppercase;">{{ current_role }}</b></span> &nbsp;|&nbsp;
             <a href="/logout/" onclick="localStorage.clear(); sessionStorage.clear();" style="color: #dc3545; text-decoration: none; font-weight: bold;">Logout</a>
         </div>
     </div>
@@ -36,14 +36,14 @@
             <code id="refreshTokenDisplay" style="display: block; margin-top: 4px; padding: 6px 10px; background: white; border: 1px solid #e2e8f0; border-radius: 4px; word-break: break-all; max-height: 35px; overflow-y: auto; color: #7c3aed;">-</code>
         </div>
 
-        <!-- Test Buttons with RBAC Indicators -->
+        <!-- Test Buttons filtered strictly by Role -->
         <div style="margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap;">
-            <button type="button" onclick="testAPI('get_books')" style="cursor: pointer; padding: 6px 12px; font-size: 12px; background: #0284c7; color: white; border: none; border-radius: 4px; font-weight: bold;">1. GET /api/books (viewer, editor, admin)</button>
-            <button type="button" onclick="testAPI('post_book')" style="cursor: pointer; padding: 6px 12px; font-size: 12px; background: #2563eb; color: white; border: none; border-radius: 4px; font-weight: bold;">2. POST /api/books (editor, admin)</button>
-            <button type="button" onclick="testAPI('edit_book')" style="cursor: pointer; padding: 6px 12px; font-size: 12px; background: #ea580c; color: white; border: none; border-radius: 4px; font-weight: bold;">3. PUT /api/books/1 (editor, admin)</button>
-            <button type="button" onclick="testAPI('delete_book')" style="cursor: pointer; padding: 6px 12px; font-size: 12px; background: #dc2626; color: white; border: none; border-radius: 4px; font-weight: bold;">4. DELETE /api/books/1 (admin only)</button>
-            <button type="button" onclick="testAPI('profile')" style="cursor: pointer; padding: 6px 12px; font-size: 12px; background: #16a34a; color: white; border: none; border-radius: 4px; font-weight: bold;">5. GET /api/profile (ดูโปรไฟล์ & Role)</button>
-            <button type="button" onclick="testAPI('refresh')" style="cursor: pointer; padding: 6px 12px; font-size: 12px; background: #475569; color: white; border: none; border-radius: 4px; font-weight: bold;">6. ขอ Access Token ใหม่ (Refresh)</button>
+            <button type="button" id="btn-test-get" onclick="testAPI('get_books')" style="cursor: pointer; padding: 6px 12px; font-size: 12px; background: #0284c7; color: white; border: none; border-radius: 4px; font-weight: bold;">1. GET /api/books (viewer, editor, admin)</button>
+            <button type="button" id="btn-test-post" onclick="testAPI('post_book')" style="cursor: pointer; padding: 6px 12px; font-size: 12px; background: #2563eb; color: white; border: none; border-radius: 4px; font-weight: bold; {% if not can_create %}display: none;{% endif %}">2. POST /api/books (editor, admin)</button>
+            <button type="button" id="btn-test-put" onclick="testAPI('edit_book')" style="cursor: pointer; padding: 6px 12px; font-size: 12px; background: #ea580c; color: white; border: none; border-radius: 4px; font-weight: bold; {% if not can_edit %}display: none;{% endif %}">3. PUT /api/books/1 (editor, admin)</button>
+            <button type="button" id="btn-test-delete" onclick="testAPI('delete_book')" style="cursor: pointer; padding: 6px 12px; font-size: 12px; background: #dc2626; color: white; border: none; border-radius: 4px; font-weight: bold; {% if not can_delete %}display: none;{% endif %}">4. DELETE /api/books/1 (admin only)</button>
+            <button type="button" id="btn-test-profile" onclick="testAPI('profile')" style="cursor: pointer; padding: 6px 12px; font-size: 12px; background: #16a34a; color: white; border: none; border-radius: 4px; font-weight: bold;">5. GET /api/profile (ดูโปรไฟล์ & Role)</button>
+            <button type="button" id="btn-test-refresh" onclick="testAPI('refresh')" style="cursor: pointer; padding: 6px 12px; font-size: 12px; background: #475569; color: white; border: none; border-radius: 4px; font-weight: bold;">6. ขอ Access Token ใหม่ (Refresh)</button>
         </div>
 
         <!-- Result Box -->
@@ -53,14 +53,17 @@
     <!-- Red Error Message Banner for Add/Delete actions -->
     <div id="msgBox" style="color: red; font-weight: bold; margin: 8px 0; font-family: sans-serif;"></div>
 
-    <form id="addBookForm" onsubmit="handleAddBook(event)">
-        {% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit">Save</button>
-    </form>
+    <!-- Add Book Form (Strictly hidden for roles that cannot create, e.g. viewer) -->
+    <div id="createBookSection" style="{% if not can_create %}display: none;{% endif %}">
+        <form id="addBookForm" onsubmit="handleAddBook(event)">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit" style="padding: 6px 18px; font-weight: bold; cursor: pointer;">Save</button>
+        </form>
+        <hr>
+    </div>
 
-    <hr>
-
+    <!-- Search & Sort Filter -->
     <form method="GET">
         <input type="text" name="q" value="{{ search }}" placeholder="Search...">
         <select name="sort" onchange="this.form.submit()">
@@ -83,6 +86,7 @@
         <button type="submit">Filter</button>
     </form>
 
+    <!-- Books Table with Strict RBAC for Action Column -->
     <table border="1" cellpadding="5" cellspacing="0">
         <tr>
             <th>ID</th>
@@ -93,7 +97,7 @@
             <th>Category</th>
             <th>Created At</th>
             <th>Updated At</th>
-            <th>Action</th>
+            <th class="col-action-th" style="{% if not can_action %}display: none;{% endif %}">Action</th>
         </tr>
         {% for item in items %}
         <tr>
@@ -105,14 +109,15 @@
             <td>{{ item.category }}</td>
             <td>{{ item.created_at }}</td>
             <td>{{ item.updated_at }}</td>
-            <td>
-                <a href="/books/edit/{{ item.id }}/">Edit</a> |
-                <a href="javascript:void(0)" onclick="handleDeleteBook({{ item.id }})">Delete</a>
+            <td class="col-action-td" style="{% if not can_action %}display: none;{% endif %}">
+                <a href="/books/edit/{{ item.id }}/" class="btn-edit" style="{% if not can_edit %}display: none;{% endif %}">Edit</a>
+                <span class="sep-action" style="{% if not can_edit or not can_delete %}display: none;{% endif %}"> | </span>
+                <a href="javascript:void(0)" onclick="handleDeleteBook({{ item.id }})" class="btn-delete" style="{% if not can_delete %}display: none;{% endif %}">Delete</a>
             </td>
         </tr>
         {% empty %}
         <tr>
-            <td colspan="9">No items found.</td>
+            <td colspan="9" style="text-align: center; color: #64748b; padding: 15px;">No items found.</td>
         </tr>
         {% endfor %}
     </table>
@@ -128,6 +133,74 @@
         } else if (currentToken && !savedOriginal) {
             sessionStorage.setItem('original_valid_token', currentToken);
             localStorage.setItem('original_valid_token', currentToken);
+        }
+
+        // Helper: Extract role from JWT token
+        function getRoleFromToken(token) {
+            if (!token) return '{{ current_role|default:"viewer" }}';
+            try {
+                const parts = token.split('.');
+                if (parts.length === 3) {
+                    let base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+                    while (base64.length % 4) {
+                        base64 += '=';
+                    }
+                    const payload = JSON.parse(decodeURIComponent(escape(atob(base64))));
+                    if (payload && payload.role) {
+                        return payload.role.toLowerCase();
+                    }
+                }
+            } catch(e) {}
+            return '{{ current_role|default:"viewer" }}';
+        }
+
+        // Apply RBAC UI filtering based on role
+        function applyRBACToUI(role) {
+            const roleNorm = (role || 'viewer').toLowerCase();
+            const isViewer = (roleNorm === 'viewer');
+            const isEditorOrManager = (roleNorm === 'editor' || roleNorm === 'manager');
+            const isAdmin = (roleNorm === 'admin');
+
+            const canCreate = isAdmin || isEditorOrManager;
+            const canEdit = isAdmin || isEditorOrManager;
+            const canDelete = isAdmin;
+            const canAction = canEdit || canDelete;
+
+            // Update badge text if role changed via token
+            const roleBadge = document.getElementById('currentRoleBadge');
+            if (roleBadge) {
+                roleBadge.innerText = roleNorm.toUpperCase();
+            }
+
+            // 1. Tester Buttons
+            const btnPost = document.getElementById('btn-test-post');
+            const btnPut = document.getElementById('btn-test-put');
+            const btnDelete = document.getElementById('btn-test-delete');
+            if (btnPost) btnPost.style.display = canCreate ? 'inline-block' : 'none';
+            if (btnPut) btnPut.style.display = canEdit ? 'inline-block' : 'none';
+            if (btnDelete) btnDelete.style.display = canDelete ? 'inline-block' : 'none';
+
+            // 2. Add Book Form
+            const createSection = document.getElementById('createBookSection');
+            if (createSection) {
+                createSection.style.display = canCreate ? 'block' : 'none';
+            }
+
+            // 3. Action column in table
+            const thList = document.querySelectorAll('.col-action-th');
+            thList.forEach(th => th.style.display = canAction ? '' : 'none');
+
+            const tdList = document.querySelectorAll('.col-action-td');
+            tdList.forEach(td => td.style.display = canAction ? '' : 'none');
+
+            const editBtns = document.querySelectorAll('.btn-edit');
+            editBtns.forEach(el => el.style.display = canEdit ? 'inline' : 'none');
+
+            const deleteBtns = document.querySelectorAll('.btn-delete');
+            deleteBtns.forEach(el => el.style.display = canDelete ? 'inline' : 'none');
+
+            const seps = document.querySelectorAll('.sep-action');
+            seps.forEach(sep => sep.style.display = (canEdit && canDelete) ? 'inline' : 'none');
         }
 
         function updateTokenStatus() {
@@ -151,6 +224,10 @@
             if (refreshDisplay) {
                 refreshDisplay.innerText = refreshToken || '(ไม่มี Refresh Token ใน localStorage)';
             }
+
+            // Strictly filter UI elements according to active token role
+            const role = getRoleFromToken(token);
+            applyRBACToUI(role);
         }
 
         window.addEventListener('DOMContentLoaded', () => {
