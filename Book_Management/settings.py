@@ -129,7 +129,7 @@ if db_host:
     DATABASES = {
         'default': {
             'ENGINE': os.environ.get('DB_ENGINE', 'django.db.backends.mysql'),
-            'NAME': os.environ.get('DB_NAME', 'bookstore_db'),
+            'NAME': os.environ.get('DB_NAME', 'defaultdb'),
             'USER': os.environ.get('DB_USER', 'avnadmin'),
             'PASSWORD': os.environ.get('DB_PASSWORD', ''),
             'HOST': db_host,
