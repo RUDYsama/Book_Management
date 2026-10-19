@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Edit {{ model_name }} #{{ item.id }}</title>
+</head>
+<body>
+    <h2>Edit {{ model_name }} (ID: {{ item.id }})</h2>
+    <hr>
+    <div id="msgBox" style="color: red; font-weight: bold; margin: 8px 0; font-family: sans-serif;"></div>
+    <form id="editForm" onsubmit="handleUpdate(event)">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Update</button>
+        <a href="{% url 'dashboard' %}">Cancel</a>
+    </form>
+
+    <script>
+        async function handleUpdate(e) {
+            e.preventDefault();
+            const msgBox = document.getElementById('msgBox');
+            msgBox.innerText = '';
+
+            const form = document.getElementById('editForm');
+            const formData = new FormData(form);
+            const payload = Object.fromEntries(formData);
+            delete payload.csrfmiddlewaretoken;
+
+            if (payload.price) payload.price = parseFloat(payload.price);
+            if (payload.stock) payload.stock = parseInt(payload.stock);
+
+            const token = localStorage.getItem('token') || localStorage.getItem('access_token') || '';
+            const headers = { 'Content-Type': 'application/json' };
+            if (token) {
+                headers['Authorization'] = 'Bearer ' + encodeURI(token);
+            }
+
+            try {
+                const res = await fetch('/api/books/{{ item.id }}/', {
+                    method: 'PUT',
+                    headers: headers,
+                    body: JSON.stringify(payload)
+                });
+
+                if (res.ok) {
+                    window.location.href = "{% url 'dashboard' %}";
+                } else {
+                    const data = await res.json().catch(() => ({}));
+                    msgBox.innerText = `[Error ${res.status}] ${data.message || data.detail || data.error || JSON.stringify(data)}`;
+                }
+            } catch (err) {
+                msgBox.innerText = 'Network Error: ' + err.message;
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Account Verified - Book Store</title>
+</head>
+<body>
+    <div style="width: 400px; margin: 50px auto; border: 1px solid green; padding: 25px; font-family: sans-serif; text-align: center;">
+        <h2 style="color: green; margin-top: 0;">Email Verification Successful!</h2>
+        <p>Your email (<b>{{ user.email }}</b>) has been successfully verified.</p>
+        <p>Account for <b>{{ user.name }}</b> is now active and ready for login.</p>
+        <p style="margin-top: 25px;">
+            <a href="/login/" style="display: inline-block; padding: 8px 24px; background: #2e7d32; color: white; text-decoration: none; border-radius: 4px;">Proceed to Login</a>
+        </p>
+    </div>
+</body>
+</html>

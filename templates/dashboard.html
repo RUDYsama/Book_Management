@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Book Management</title>
+</head>
+<body style="font-family: sans-serif; padding: 15px; margin: 0;">
+    <div style="display: flex; justify-content: space-between; align-items: center; background: #f8f9fa; padding: 10px 15px; border-bottom: 1px solid #ccc;">
+        <h2 style="margin: 0;">Book Management</h2>
+        <div>
+            <span>Logged in as: <b>{{ current_user }}</b> ({{ current_email }}) &nbsp;|&nbsp; Role: <b style="color: #0284c7; text-transform: uppercase;">{{ current_role }}</b></span> &nbsp;|&nbsp;
+            <a href="/logout/" onclick="localStorage.clear(); sessionStorage.clear();" style="color: #dc3545; text-decoration: none; font-weight: bold;">Logout</a>
+        </div>
+    </div>
+
+    <!-- Lab 9.5: JWT Authorization & Role-Based Access Control (RBAC) Tester -->
+    <div style="background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 8px; padding: 15px; margin: 15px 0;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <b style="color: #0f172a; font-size: 15px;">Lab 9.5: JWT Authorization & Role-Based Access Control (RBAC) Tester</b>
+            <span id="jwtStatusBadge" style="font-size: 13px; font-weight: bold;"></span>
+        </div>
+        
+        <!-- Editable Access Token Box -->
+        <div style="margin-top: 10px; font-size: 12px; color: #475569;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                <b>1. Access Token (แก้ไขได้อิสระเพื่อทดสอบกรณี Token ผิด / ถูก / เปลี่ยนสิทธิ์):</b>
+                <div>
+                    <button type="button" onclick="restoreToken()">คืนค่า Token เดิม</button>
+                </div>
+            </div>
+            <textarea id="tokenInput" rows="2" oninput="onTokenManualChange()" placeholder="วางหรือแก้ไข Access Token ที่นี่..." style="width: 100%; box-sizing: border-box; padding: 8px 10px; font-family: monospace; font-size: 11px; border: 2px solid #0284c7; border-radius: 4px; color: #0284c7; resize: vertical; outline: none;"></textarea>
+        </div>
+
+        <!-- Refresh Token Box -->
+        <div style="margin-top: 10px; font-size: 12px; color: #475569;">
+            <b>2. Refresh Token (localStorage.getItem("refresh_token")) - ใช้ขอ Access Token ใหม่:</b>
+            <code id="refreshTokenDisplay" style="display: block; margin-top: 4px; padding: 6px 10px; background: white; border: 1px solid #e2e8f0; border-radius: 4px; word-break: break-all; max-height: 35px; overflow-y: auto; color: #7c3aed;">-</code>
+        </div>
+
+        <!-- Test Buttons with RBAC Indicators -->
+        <div style="margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap;">
+            <button type="button" onclick="testAPI('get_books')" style="cursor: pointer; padding: 6px 12px; font-size: 12px; background: #0284c7; color: white; border: none; border-radius: 4px; font-weight: bold;">1. GET /api/books (viewer, editor, admin)</button>
+            <button type="button" onclick="testAPI('post_book')" style="cursor: pointer; padding: 6px 12px; font-size: 12px; background: #2563eb; color: white; border: none; border-radius: 4px; font-weight: bold;">2. POST /api/books (editor, admin)</button>
+            <button type="button" onclick="testAPI('edit_book')" style="cursor: pointer; padding: 6px 12px; font-size: 12px; background: #ea580c; color: white; border: none; border-radius: 4px; font-weight: bold;">3. PUT /api/books/1 (editor, admin)</button>
+            <button type="button" onclick="testAPI('delete_book')" style="cursor: pointer; padding: 6px 12px; font-size: 12px; background: #dc2626; color: white; border: none; border-radius: 4px; font-weight: bold;">4. DELETE /api/books/1 (admin only)</button>
+            <button type="button" onclick="testAPI('profile')" style="cursor: pointer; padding: 6px 12px; font-size: 12px; background: #16a34a; color: white; border: none; border-radius: 4px; font-weight: bold;">5. GET /api/profile (ดูโปรไฟล์ & Role)</button>
+            <button type="button" onclick="testAPI('refresh')" style="cursor: pointer; padding: 6px 12px; font-size: 12px; background: #475569; color: white; border: none; border-radius: 4px; font-weight: bold;">6. ขอ Access Token ใหม่ (Refresh)</button>
+        </div>
+
+        <!-- Result Box -->
+        <div id="apiTestResult" style="display: none; margin-top: 12px; background: #0f172a; color: #f8fafc; border-radius: 6px; padding: 12px; font-family: monospace; font-size: 12px; max-height: 200px; overflow-y: auto;"></div>
+    </div>
+
+    <!-- Red Error Message Banner for Add/Delete actions -->
+    <div id="msgBox" style="color: red; font-weight: bold; margin: 8px 0; font-family: sans-serif;"></div>
+
+    <form id="addBookForm" onsubmit="handleAddBook(event)">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Save</button>
+    </form>
+
+    <hr>
+
+    <form method="GET">
+        <input type="text" name="q" value="{{ search }}" placeholder="Search...">
+        <select name="sort" onchange="this.form.submit()">
+            <option value="">Sort by...</option>
+            <option value="id" {% if current_sort == 'id' %}selected{% endif %}>ID (Asc)</option>
+            <option value="-id" {% if current_sort == '-id' %}selected{% endif %}>ID (Desc)</option>
+            <option value="title" {% if current_sort == 'title' %}selected{% endif %}>Title (A-Z)</option>
+            <option value="-title" {% if current_sort == '-title' %}selected{% endif %}>Title (Z-A)</option>
+            <option value="author" {% if current_sort == 'author' %}selected{% endif %}>Author</option>
+            <option value="price" {% if current_sort == 'price' %}selected{% endif %}>Price (Low-High)</option>
+            <option value="-price" {% if current_sort == '-price' %}selected{% endif %}>Price (High-Low)</option>
+            <option value="stock" {% if current_sort == 'stock' %}selected{% endif %}>Stock (Low-High)</option>
+            <option value="-stock" {% if current_sort == '-stock' %}selected{% endif %}>Stock (High-Low)</option>
+            <option value="category" {% if current_sort == 'category' %}selected{% endif %}>Category</option>
+            <option value="-created_at" {% if current_sort == '-created_at' %}selected{% endif %}>Created At (Newest)</option>
+            <option value="created_at" {% if current_sort == 'created_at' %}selected{% endif %}>Created At (Oldest)</option>
+            <option value="-updated_at" {% if current_sort == '-updated_at' %}selected{% endif %}>Updated At (Newest)</option>
+            <option value="updated_at" {% if current_sort == 'updated_at' %}selected{% endif %}>Updated At (Oldest)</option>
+        </select>
+        <button type="submit">Filter</button>
+    </form>
+
+    <table border="1" cellpadding="5" cellspacing="0">
+        <tr>
+            <th>ID</th>
+            <th>Title</th>
+            <th>Author</th>
+            <th>Price</th>
+            <th>Stock</th>
+            <th>Category</th>
+            <th>Created At</th>
+            <th>Updated At</th>
+            <th>Action</th>
+        </tr>
+        {% for item in items %}
+        <tr>
+            <td>{{ item.id }}</td>
+            <td>{{ item.title }}</td>
+            <td>{{ item.author }}</td>
+            <td>{{ item.price }}</td>
+            <td>{{ item.stock }}</td>
+            <td>{{ item.category }}</td>
+            <td>{{ item.created_at }}</td>
+            <td>{{ item.updated_at }}</td>
+            <td>
+                <a href="/books/edit/{{ item.id }}/">Edit</a> |
+                <a href="javascript:void(0)" onclick="handleDeleteBook({{ item.id }})">Delete</a>
+            </td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="9">No items found.</td>
+        </tr>
+        {% endfor %}
+    </table>
+
+    <script>
+        // Token state management
+        let currentToken = localStorage.getItem('token') || localStorage.getItem('access_token') || '';
+        const savedOriginal = sessionStorage.getItem('original_valid_token') || localStorage.getItem('original_valid_token');
+
+        if (!currentToken && savedOriginal) {
+            currentToken = savedOriginal;
+            localStorage.setItem('token', currentToken);
+        } else if (currentToken && !savedOriginal) {
+            sessionStorage.setItem('original_valid_token', currentToken);
+            localStorage.setItem('original_valid_token', currentToken);
+        }
+
+        function updateTokenStatus() {
+            const tokenInput = document.getElementById('tokenInput');
+            const token = tokenInput ? tokenInput.value.trim() : (localStorage.getItem('token') || '').trim();
+            const validToken = (sessionStorage.getItem('original_valid_token') || localStorage.getItem('original_valid_token') || '').trim();
+            const refreshToken = localStorage.getItem('refresh_token') || '';
+            const badge = document.getElementById('jwtStatusBadge');
+            const refreshDisplay = document.getElementById('refreshTokenDisplay');
+
+            if (token && validToken && token === validToken) {
+                badge.innerText = 'Token ถูกตามระบบ';
+                badge.style.color = '#16a34a';
+                badge.style.background = 'transparent';
+            } else {
+                badge.innerText = 'Token ผิด';
+                badge.style.color = '#dc2626';
+                badge.style.background = 'transparent';
+            }
+
+            if (refreshDisplay) {
+                refreshDisplay.innerText = refreshToken || '(ไม่มี Refresh Token ใน localStorage)';
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const tokenInput = document.getElementById('tokenInput');
+            if (tokenInput) {
+                tokenInput.value = localStorage.getItem('token') || localStorage.getItem('access_token') || '';
+            }
+            updateTokenStatus();
+        });
+
+        function onTokenManualChange() {
+            const val = document.getElementById('tokenInput').value.trim();
+            localStorage.setItem('token', val);
+            localStorage.setItem('access_token', val);
+            updateTokenStatus();
+        }
+
+        function restoreToken() {
+            const orig = sessionStorage.getItem('original_valid_token') || localStorage.getItem('original_valid_token') || '';
+            if (orig) {
+                document.getElementById('tokenInput').value = orig;
+                localStorage.setItem('token', orig);
+                localStorage.setItem('access_token', orig);
+                updateTokenStatus();
+            }
+        }
+
+        function getToken() {
+            return document.getElementById('tokenInput').value.trim();
+        }
+
+        async function testAPI(type) {
+            const resultBox = document.getElementById('apiTestResult');
+            resultBox.style.display = 'block';
+            resultBox.innerText = 'Sending request...';
+
+            const token = getToken();
+            const refreshToken = localStorage.getItem('refresh_token') || sessionStorage.getItem('refresh_token') || '';
+
+            let url = '/api/books/';
+            let options = { headers: {} };
+
+            if (token) {
+                options.headers['Authorization'] = 'Bearer ' + encodeURI(token);
+            }
+
+            if (type === 'get_books') {
+                url = '/api/books/';
+                options.method = 'GET';
+            } else if (type === 'post_book') {
+                url = '/api/books/';
+                options.method = 'POST';
+                options.headers['Content-Type'] = 'application/json';
+                options.body = JSON.stringify({
+                    title: 'Node.js & Express Architecture',
+                    author: 'Dev Master',
+                    price: 390.00,
+                    stock: 15,
+                    category: 'Backend'
+                });
+            } else if (type === 'edit_book') {
+                url = '/api/books/1/';
+                options.method = 'PUT';
+                options.headers['Content-Type'] = 'application/json';
+                options.body = JSON.stringify({
+                    title: 'พื้นฐานการเขียนโปรแกรม (ปรับปรุงใหม่)',
+                    author: 'สมชาย ใจดี',
+                    price: 280.00,
+                    stock: 12,
+                    category: 'Programming'
+                });
+            } else if (type === 'delete_book') {
+                url = '/api/books/1/';
+                options.method = 'DELETE';
+            } else if (type === 'profile') {
+                url = '/api/profile/';
+                options.method = 'GET';
+            } else if (type === 'refresh') {
+                url = '/api/token/refresh/';
+                options.method = 'POST';
+                options.headers['Content-Type'] = 'application/json';
+                options.body = JSON.stringify({ refresh: refreshToken });
+            }
+
+            try {
+                const res = await fetch(url, options);
+                const data = await res.json().catch(() => ({}));
+
+                if (type === 'refresh' && res.ok && data.access) {
+                    const newAccess = data.access;
+                    localStorage.setItem('token', newAccess);
+                    localStorage.setItem('access_token', newAccess);
+                    sessionStorage.setItem('original_valid_token', newAccess);
+                    localStorage.setItem('original_valid_token', newAccess);
+
+                    const tokenInput = document.getElementById('tokenInput');
+                    if (tokenInput) {
+                        tokenInput.value = newAccess;
+                    }
+                    updateTokenStatus();
+                }
+
+                resultBox.innerHTML = `<b>Status:</b> ${res.status} ${res.statusText}<br>` +
+                    `<b>Response:</b><br><pre style="margin: 4px 0;">${JSON.stringify(data, null, 2)}</pre>`;
+            } catch (err) {
+                resultBox.innerHTML = `<b>Error:</b> ${err.message}`;
+            }
+        }
+
+        async function handleAddBook(e) {
+            e.preventDefault();
+            const msgBox = document.getElementById('msgBox');
+            msgBox.innerText = '';
+
+            const form = document.getElementById('addBookForm');
+            const formData = new FormData(form);
+            const payload = Object.fromEntries(formData);
+            delete payload.csrfmiddlewaretoken;
+
+            if (payload.price) payload.price = parseFloat(payload.price);
+            if (payload.stock) payload.stock = parseInt(payload.stock);
+
+            const token = getToken();
+            const headers = { 'Content-Type': 'application/json' };
+            if (token) {
+                headers['Authorization'] = 'Bearer ' + encodeURI(token);
+            }
+
+            try {
+                const res = await fetch('/api/books/', {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json().catch(() => ({}));
+
+                if (res.ok) {
+                    window.location.reload();
+                } else {
+                    msgBox.innerText = `[Error ${res.status}] ${data.message || data.detail || data.error || JSON.stringify(data)}`;
+                }
+            } catch (err) {
+                msgBox.innerText = 'Network Error: ' + err.message;
+            }
+        }
+
+        async function handleDeleteBook(id) {
+            if (!confirm('Delete?')) return;
+            const msgBox = document.getElementById('msgBox');
+            msgBox.innerText = '';
+
+            const token = getToken();
+            const headers = {};
+            if (token) {
+                headers['Authorization'] = 'Bearer ' + encodeURI(token);
+            }
+
+            try {
+                const res = await fetch(`/api/books/${id}/`, {
+                    method: 'DELETE',
+                    headers: headers
+                });
+
+                if (res.status === 204 || res.ok) {
+                    window.location.reload();
+                } else {
+                    const data = await res.json().catch(() => ({}));
+                    msgBox.innerText = `[Error ${res.status}] ${data.message || data.detail || data.error || JSON.stringify(data)}`;
+                }
+            } catch (err) {
+                msgBox.innerText = 'Network Error: ' + err.message;
+            }
+        }
+    </script>
+</body>
+</html>
