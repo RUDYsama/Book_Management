@@ -76,11 +76,18 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-# Lab 9.7: Add CorsMiddleware at top of middleware pipeline
+# Lab 9.7: Add CorsMiddleware and WhiteNoise
 try:
     import corsheaders
     MIDDLEWARE.insert(0, 'corsheaders.middleware.CorsMiddleware')
 except ImportError:
+    pass
+
+try:
+    import whitenoise
+    sec_idx = MIDDLEWARE.index('django.middleware.security.SecurityMiddleware')
+    MIDDLEWARE.insert(sec_idx + 1, 'whitenoise.middleware.WhiteNoiseMiddleware')
+except (ImportError, ValueError):
     pass
 
 ROOT_URLCONF = 'Book_Management.urls'
